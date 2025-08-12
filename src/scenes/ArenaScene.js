@@ -36,25 +36,27 @@ export default class ArenaScene extends Phaser.Scene {
     // Thanos
     this.load.image("thanos", "assets/thanos.png");
 
-    // Fighter (single character)
+    // Fighter (idle/walk/run)
     this.load.spritesheet("fighter_idle",    "assets/avatars/Fighter/Idle.png",     { frameWidth: 128, frameHeight: 128 });
     this.load.spritesheet("fighter_walk",    "assets/avatars/Fighter/Walk.png",     { frameWidth: 128, frameHeight: 128 });
     this.load.spritesheet("fighter_run",     "assets/avatars/Fighter/Run.png",      { frameWidth: 128, frameHeight: 128 });
-    this.load.spritesheet("fighter_attack1", "assets/avatars/Fighter/Attack_1.png", { frameWidth: 128, frameHeight: 128 });
 
-    // (Fireworks removed)
+    // Fighter attacks (multiple)
+    this.load.spritesheet("fighter_attack1", "assets/avatars/Fighter/Attack_1.png", { frameWidth: 128, frameHeight: 128 });
+    this.load.spritesheet("fighter_attack2", "assets/avatars/Fighter/Attack_2.png", { frameWidth: 128, frameHeight: 128 });
+    this.load.spritesheet("fighter_attack3", "assets/avatars/Fighter/Attack_3.png", { frameWidth: 128, frameHeight: 128 });
   }
 
   create() {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
 
-    // Parallax background (like your first prompt)
+    // Backgrounds
     this.bgFar = this.add
       .tileSprite(width / 2, height / 2, width, height, "background_far")
       .setScrollFactor(0);
     this.bgNear = this.add
-      .tileSprite(width / 2, height / 2 + 200 , width*2, height*2, "background")
+      .tileSprite(width / 2, height / 2 + 200, width * 2, height * 2, "background")
       .setScrollFactor(0);
 
     this.createAnimations();
@@ -103,15 +105,25 @@ export default class ArenaScene extends Phaser.Scene {
       });
     };
 
+    // Movement animations
     loopAnim("fighter_idle_anim", "fighter_idle", 8);
     loopAnim("fighter_walk_anim", "fighter_walk", 10);
     loopAnim("fighter_run_anim", "fighter_run", 20);
-    oneShotAnim("fighter_attack_anim", "fighter_attack1", 14);
+
+    // Attack animations
+    oneShotAnim("fighter_attack1_anim", "fighter_attack1", 14);
+    oneShotAnim("fighter_attack2_anim", "fighter_attack2", 14);
+    oneShotAnim("fighter_attack3_anim", "fighter_attack3", 14);
   }
 
   attackThanos() {
     const originalX = this.attacker.x;
     const targetX = this.thanos.x - CONFIG.attacker.attackOffset;
+
+    const attackChoices = ["fighter_attack1_anim", "fighter_attack2_anim", "fighter_attack3_anim"];
+    // const chosenAttack = attackChoices[Math.floor(Math.random() * attackChoices.length)];
+
+    const chosenAttack = "fighter_attack" + (Math.floor(Math.random() * 3) + 1) + "_anim";
 
     // Run toward Thanos
     this.attacker.play("fighter_run_anim", true);
@@ -123,23 +135,26 @@ export default class ArenaScene extends Phaser.Scene {
       ease: CONFIG.attacker.animation.ease,
       onComplete: () => {
         // Attack
-        this.attacker.play("fighter_attack_anim", true);
+        this.attacker.play(chosenAttack, true);
 
         // Screen shake + hit FX
-        setTimeout(() => {
-          this.cameras.main.shake(200, 0.005);
-          this.hitThanosEffect();
+          setTimeout(() => {
+            this.cameras.main.shake(200, 0.005);
+            this.hitThanosEffect();
+          }, 200);
+
           this.attacker.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
-          this.tweens.add({
-            targets: this.attacker,
-            x: originalX,
-            duration: CONFIG.attacker.animation.duration,
-            ease: CONFIG.attacker.animation.ease,
-            onStart: () => this.attacker.play("fighter_run_anim", true),
-            onComplete: () => this.attacker.play("fighter_walk_anim", true)
+            setTimeout(() => {
+              this.tweens.add({
+              targets: this.attacker,
+              x: originalX,
+              duration: CONFIG.attacker.animation.duration,
+              ease: CONFIG.attacker.animation.ease,
+              onStart: () => this.attacker.play("fighter_run_anim", true),
+              onComplete: () => this.attacker.play("fighter_walk_anim", true)
+            });
+            }, 50);
           });
-        });
-        }, 300);
       }
     });
   }
@@ -159,10 +174,7 @@ export default class ArenaScene extends Phaser.Scene {
     });
   }
 
-  // Fireworks functions removed
-
   update() {
-    // Parallax scroll (both layers)
     if (this.bgFar) this.bgFar.tilePositionX += 0.1;
     if (this.bgNear) this.bgNear.tilePositionX += 0.3;
   }
@@ -171,8 +183,8 @@ export default class ArenaScene extends Phaser.Scene {
     const { width, height } = gameSize;
     this.cameras.resize(width, height);
 
-    if (this.bgFar) this.bgFar.setDisplaySize(width/3, height/3).setPosition(width / 2, height / 2);
-    if (this.bgNear) this.bgNear.setDisplaySize(width/5, height/5).setPosition(width / 2, height / 2);
+    if (this.bgFar) this.bgFar.setDisplaySize(width / 3, height / 3).setPosition(width / 2, height / 2);
+    if (this.bgNear) this.bgNear.setDisplaySize(width / 5, height / 5).setPosition(width / 2, height / 2);
 
     if (this.thanos) {
       this.thanos.setPosition(width - CONFIG.thanos.xOffset, CONFIG.thanos.yPosition);
